@@ -5,6 +5,7 @@ import { BorrowingController } from './borrowing.controller';
 import { BorrowingTransaction } from './entities/borrowing-transaction.entity';
 import { BooksModule } from '../books/books.module';
 import { BorrowersModule } from '../borrowers/borrowers.module';
+import { CronService } from '../shared/utils/cron.service';
 
 @Module({
   imports: [
@@ -13,7 +14,7 @@ import { BorrowersModule } from '../borrowers/borrowers.module';
     BorrowersModule,
   ],
   controllers: [BorrowingController],
-  providers: [BorrowingService],
+  providers: [BorrowingService, CronService],
   exports: [BorrowingService],
 })
 export class BorrowingModule {}

@@ -104,7 +104,7 @@ export class BorrowersService {
     });
 
     if (!borrower) {
-      throw new NotFoundException('Borrower not found');
+      throw new NotFoundException(`Borrower with ID ${id} not found or deleted`);
     }
 
     return borrower;

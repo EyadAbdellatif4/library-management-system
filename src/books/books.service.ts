@@ -104,7 +104,7 @@ export class BooksService {
     });
 
     if (!book) {
-      throw new NotFoundException('Book not found');
+      throw new NotFoundException(`Book with ID ${id} not found or deleted`);
     }
 
     return book;

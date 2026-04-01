@@ -12,7 +12,7 @@ import { CheckoutBookDto } from './dto/checkout-book.dto';
 import { ReturnBookDto } from './dto/return-book.dto';
 import { BorrowingFilterDto } from './dto/borrowing-filter.dto';
 import { IBorrowingTransaction } from './interfaces/borrowing-transaction.interface';
-import { Op, WhereOptions } from 'sequelize';
+import { Op, WhereOptions, Sequelize as Sql } from 'sequelize';
 
 @Injectable()
 export class BorrowingService {
@@ -30,21 +30,15 @@ export class BorrowingService {
   async checkoutBook(checkoutBookDto: CheckoutBookDto) {
     const book = await this.booksService.findById(checkoutBookDto.book_id);
 
-    if (book.deletedAt) {
-      throw new NotFoundException('Book not found or deleted');
-    }
-
     if (book.available_quantity <= 0) {
-      throw new BadRequestException('This book is not available for checkout');
+      throw new BadRequestException(
+        `Book "${book.title}" (ID: ${book.id}) is out of stock and not available for checkout`,
+      );
     }
 
     const borrower = await this.borrowersService.findById(
       checkoutBookDto.borrower_id,
     );
-
-    if (borrower.deletedAt) {
-      throw new NotFoundException('Borrower not found or deleted');
-    }
 
 
 
@@ -97,7 +91,7 @@ export class BorrowingService {
 
       if (!transaction) {
         throw new NotFoundException(
-          'Borrowing transaction not found or already returned',
+          `Active borrowing transaction with ID ${returnBookDto.transaction_id} not found or already returned`,
         );
       }
 
@@ -187,7 +181,6 @@ export class BorrowingService {
   ) {
     // Validate borrower exists
     await this.borrowersService.findById(borrowerId);
-
     const offset = (page - 1) * limit;
 
     const { count, rows } =
@@ -224,10 +217,8 @@ export class BorrowingService {
     const { count, rows } =
       await this.borrowingTransactionModel.findAndCountAll({
         where: {
-          status: 'BORROWED',
-          due_date: {
-            [Op.lt]: now,
-          },
+          status: { [Op.in]: ['BORROWED', 'OVERDUE'] },
+          checkout_date: { [Op.gt]: Sql.col('due_date') },
           deletedAt: null,
         } as any,
         include: ['book', 'borrower'],
@@ -236,8 +227,21 @@ export class BorrowingService {
         order: [['due_date', 'ASC']],
       });
 
+    const mappedData = rows.map((transaction) => {
+      const data = transaction.get({ plain: true });
+      const checkoutDate = new Date(data.checkout_date);
+      const dueDate = new Date(data.due_date);
+      const overdueMs = checkoutDate.getTime() - dueDate.getTime();
+      const overdue_days = Math.max(0, Math.ceil(overdueMs / (1000 * 60 * 60 * 24)));
+
+      return {
+        ...data,
+        overdue_days,
+      };
+    });
+
     return {
-      data: rows,
+      data: mappedData,
       pagination: {
         total: count,
         page,
@@ -257,7 +261,6 @@ export class BorrowingService {
   ) {
     // Validate borrower exists
     await this.borrowersService.findById(borrowerId);
-
     const offset = (page - 1) * limit;
 
     const { count, rows } =
@@ -296,7 +299,7 @@ export class BorrowingService {
     });
 
     if (!transaction) {
-      throw new NotFoundException('Borrowing transaction not found');
+      throw new NotFoundException(`Borrowing transaction with ID ${id} not found`);
     }
 
     return transaction as IBorrowingTransaction;

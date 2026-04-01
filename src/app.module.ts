@@ -10,9 +10,11 @@ import { BooksModule } from './books/books.module';
 import { BorrowersModule } from './borrowers/borrowers.module';
 import { BorrowingModule } from './borrowing/borrowing.module';
 import databaseModels from './shared/database/databaseModel';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     ConfigModule.forRoot({ isGlobal: true }),
     ThrottlerModule.forRoot([
       {
