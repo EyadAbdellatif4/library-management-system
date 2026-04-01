@@ -7,12 +7,17 @@ import { Sequelize } from 'sequelize-typescript';
 import { InjectModel } from '@nestjs/sequelize';
 import { BorrowingTransaction } from './entities/borrowing-transaction.entity';
 import { BooksService } from '../books/books.service';
+import { Book } from '../books/entities/book.entity';
+import { Borrower } from '../borrowers/entities/borrower.entity';
 import { BorrowersService } from '../borrowers/borrowers.service';
 import { CheckoutBookDto } from './dto/checkout-book.dto';
 import { ReturnBookDto } from './dto/return-book.dto';
 import { BorrowingFilterDto } from './dto/borrowing-filter.dto';
 import { IBorrowingTransaction } from './interfaces/borrowing-transaction.interface';
 import { Op, WhereOptions, Sequelize as Sql } from 'sequelize';
+import { Parser as CsvParser } from 'json2csv';
+import * as ExcelJS from 'exceljs';
+import { AnalyticsFilterDto, ExportFilterDto } from './dto/report-filter.dto';
 
 @Injectable()
 export class BorrowingService {
@@ -303,5 +308,164 @@ export class BorrowingService {
     }
 
     return transaction as IBorrowingTransaction;
+  }
+
+  /**
+   * Get analytical reports of the borrowing process
+   */
+  async getAnalytics(filter: AnalyticsFilterDto) {
+    const whereConditions: WhereOptions = { deletedAt: null };
+
+    if (filter.startDate && filter.endDate) {
+      whereConditions.checkout_date = {
+        [Op.between]: [new Date(filter.startDate), new Date(filter.endDate)],
+      };
+    } else if (filter.startDate) {
+      whereConditions.checkout_date = {
+        [Op.gte]: new Date(filter.startDate),
+      };
+    } else if (filter.endDate) {
+      whereConditions.checkout_date = {
+        [Op.lte]: new Date(filter.endDate),
+      };
+    }
+
+    // Basic totals
+    const totalTransactions = await this.borrowingTransactionModel.count({
+      where: whereConditions,
+    });
+
+    const statusCounts = await this.borrowingTransactionModel.findAll({
+      attributes: [
+        'status',
+        [this.sequelize.fn('COUNT', this.sequelize.col('status')), 'count'],
+      ],
+      where: whereConditions,
+      group: ['status'],
+    });
+
+    // Top 5 books checked out
+    // Top 5 books checked out
+    const topBooks = (await this.borrowingTransactionModel.findAll({
+      attributes: [
+        'book_id',
+        [this.sequelize.fn('COUNT', this.sequelize.col('BorrowingTransaction.id')), 'count'],
+      ],
+      where: whereConditions,
+      include: [
+        {
+          model: Book,
+          attributes: ['title'],
+        },
+      ],
+      group: ['BorrowingTransaction.book_id', 'book.id', 'book.title'],
+      order: [[this.sequelize.literal('count'), 'DESC']],
+      limit: 5,
+      raw: true,
+      nest: true,
+    })) as any[];
+
+    return {
+      period: {
+        startDate: filter.startDate || 'all time',
+        endDate: filter.endDate || 'now',
+      },
+      summary: {
+        totalTransactions,
+        byStatus: statusCounts.map((s) => ({
+          status: s.status,
+          count: parseInt(s.get('count') as string),
+        })),
+      },
+      topBooks: topBooks.map((b) => ({
+        id: b.book_id,
+        title: b.book ? b.book.title : null,
+        count: parseInt(b.count),
+      })),
+    };
+  }
+
+  /**
+   * Export borrowing data in CSV or XLSX format
+   */
+  async exportData(filter: ExportFilterDto) {
+    const whereConditions: WhereOptions = { deletedAt: null };
+
+    if (filter.startDate && filter.endDate) {
+      whereConditions.checkout_date = {
+        [Op.between]: [new Date(filter.startDate), new Date(filter.endDate)],
+      };
+    }
+
+    const transactions = await this.borrowingTransactionModel.findAll({
+      where: whereConditions,
+      include: [
+        { model: Book, as: 'book' },
+        { model: Borrower, as: 'borrower' },
+      ],
+      order: [['checkout_date', 'DESC']],
+    });
+
+    const flattenedData = transactions.map((t) => {
+      const data = t.get({ plain: true });
+      return {
+        transaction_id: data.id,
+        book_title: data.book?.title,
+        borrower_name: data.borrower?.name,
+        checkout_date: data.checkout_date,
+        due_date: data.due_date,
+        return_date: data.return_date,
+        status: data.status,
+      };
+    });
+
+    let buffer: Buffer;
+    let contentType: string;
+    let fileExtension: string;
+
+    if (filter.format === 'xlsx') {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Borrowing Report');
+
+      worksheet.columns = [
+        { header: 'ID', key: 'transaction_id', width: 20 },
+        { header: 'Book Title', key: 'book_title', width: 30 },
+        { header: 'Borrower', key: 'borrower_name', width: 20 },
+        { header: 'Checkout Date', key: 'checkout_date', width: 15 },
+        { header: 'Due Date', key: 'due_date', width: 15 },
+        { header: 'Return Date', key: 'return_date', width: 15 },
+        { header: 'Status', key: 'status', width: 10 },
+      ];
+
+      worksheet.addRows(flattenedData);
+      buffer = (await workbook.xlsx.writeBuffer()) as any;
+      contentType =
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+      fileExtension = 'xlsx';
+    } else {
+      // Default to CSV
+      const fields = [
+        'transaction_id',
+        'book_title',
+        'borrower_name',
+        'checkout_date',
+        'due_date',
+        'return_date',
+        'status',
+      ];
+      const parser = new CsvParser({ fields });
+      const csv = parser.parse(flattenedData);
+      buffer = Buffer.from(csv);
+      contentType = 'text/csv';
+      fileExtension = 'csv';
+    }
+
+    const filename = `borrowing_report_${new Date().toISOString().split('T')[0]}.${fileExtension}`;
+
+    return {
+      buffer,
+      filename,
+      contentType,
+    };
   }
 }

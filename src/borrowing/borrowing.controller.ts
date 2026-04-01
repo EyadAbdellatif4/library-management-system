@@ -7,6 +7,7 @@ import {
   Query,
   HttpCode,
   HttpStatus,
+  Res,
  
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBasicAuth } from '@nestjs/swagger';
@@ -15,6 +16,8 @@ import { CheckoutBookDto } from './dto/checkout-book.dto';
 import { ReturnBookDto } from './dto/return-book.dto';
 import { BorrowingFilterDto } from './dto/borrowing-filter.dto';
 import { Public } from '../auth/decorators/public.decorator';
+import { Response } from 'express';
+import { AnalyticsFilterDto, ExportFilterDto } from './dto/report-filter.dto';
 
 @ApiTags('borrowing')
 @ApiBasicAuth('basic')
@@ -157,5 +160,31 @@ export class BorrowingController {
   @ApiResponse({ status: 404, description: 'Transaction not found' })
   findOne(@Param('id') id: string) {
     return this.borrowingService.findById(id);
+  }
+
+  @Get('analytics')
+  @ApiOperation({ summary: 'Get analytical reports of the borrowing process' })
+  @ApiResponse({
+    status: 200,
+    description: 'Analytical reports retrieved successfully',
+  })
+  getAnalytics(@Query() filter: AnalyticsFilterDto) {
+    return this.borrowingService.getAnalytics(filter);
+  }
+
+  @Get('export')
+  @ApiOperation({ summary: 'Export borrowing process data' })
+  @ApiResponse({ status: 200, description: 'Data exported successfully' })
+  async exportData(
+    @Query() filter: ExportFilterDto,
+    @Res() res: Response,
+  ) {
+    const { buffer, filename, contentType } =
+      await this.borrowingService.exportData(filter);
+
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
+
+    res.send(buffer);
   }
 }
