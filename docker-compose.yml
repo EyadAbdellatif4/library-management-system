@@ -1,0 +1,45 @@
+services:
+  app:
+    build: .
+    container_name: library_app
+    ports:
+      - "3001:3001"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: 1q2w3e4r5t
+      DB_DATABASE: library_system
+      NODE_ENV: development
+    networks:
+      - library-net
+
+  db:
+    image: postgres:15-alpine
+    container_name: library_db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1q2w3e4r5t
+      POSTGRES_DB: library_system
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d library_system"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - library-net
+
+networks:
+  library-net:
+    driver: bridge
+
+volumes:
+  postgres_data:

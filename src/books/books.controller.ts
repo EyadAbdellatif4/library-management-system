@@ -9,7 +9,9 @@ import {
   Query,
   HttpCode,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
+import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBasicAuth } from '@nestjs/swagger';
 import { BooksService } from './books.service';
 import { CreateBookDto } from './dto/create-book.dto';
@@ -17,12 +19,14 @@ import { UpdateBookDto } from './dto/update-book.dto';
 import { BooksFilterDto } from './dto/books-filter.dto';
 import { Public } from '../auth/decorators/public.decorator';
 
+@UseGuards(ThrottlerGuard)
 @ApiTags('books')
 @ApiBasicAuth('basic')
 @Controller('books')
 export class BooksController {
   constructor(private readonly booksService: BooksService) { }
 
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Add a new book' })
@@ -36,6 +40,7 @@ export class BooksController {
     return this.booksService.create(createBookDto);
   }
 
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
   @Get()
   @Public()
   @ApiOperation({

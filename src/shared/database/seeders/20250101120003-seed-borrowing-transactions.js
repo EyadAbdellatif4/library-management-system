@@ -128,8 +128,23 @@ module.exports = {
         updatedAt: new Date(),
       },
     ];
+ 
+    // Check for existing transactions to prevent duplicates
+    const [existingTransactions] = await queryInterface.sequelize.query(
+      'SELECT id FROM "borrowing_transactions"',
+    );
+    const existingIds = new Set(existingTransactions.map((t) => t.id));
+    const transactionsToInsert = transactions.filter(
+      (t) => !existingIds.has(t.id),
+    );
 
-    return await queryInterface.bulkInsert('borrowing_transactions', transactions);
+    if (transactionsToInsert.length > 0) {
+      return await queryInterface.bulkInsert(
+        'borrowing_transactions',
+        transactionsToInsert,
+      );
+    }
+    return Promise.resolve();
   },
 
   down: async (queryInterface, Sequelize) => {

@@ -1,98 +1,199 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Library Management System
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A robust, enterprise-grade Library Management System built with **NestJS**, **Sequelize (PostgreSQL)**, and **Docker**. This system provides a comprehensive API for managing book inventory, borrower profiles, and the complete borrowing lifecycle.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+---
 
-## Description
+## 🚀 Getting Started
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+### 1. Prerequisites
+- **Docker Desktop** (Engine running)
+- **Node.js 20+** (if running locally)
+- **PostgreSQL 15** (if running locally)
 
-## Project setup
+### 2. Environment Configuration
+Create a `.env` file in the `library-management-system/` directory (or use the one provided):
 
-```bash
-$ npm install
+```env
+# Database Configuration
+DB_HOST=db
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=1q2w3e4r5t
+DB_DATABASE=library_system
+DB_SCHEMA=public
+
+# Node Environment
+NODE_ENV=development
+PORT=3001
+
+# Auth Configuration
+BASIC_USER=eyad@gmail.com
+BASIC_PASS=1q2w3e4r5t
 ```
 
-## Compile and run the project
+---
 
-```bash
-# development
-$ npm run start
+## 🐳 Docker Deployment (Recommended)
 
-# watch mode
-$ npm run start:dev
+The project is fully containerized with automated workflow orchestration.
 
-# production mode
-$ npm run start:prod
+1. **Navigate to the project folder:**
+   ```bash
+   cd library-management-system
+   ```
+
+2. **Start the system:**
+   ```bash
+   docker-compose up --build -d
+   ```
+
+**What happens automatically:**
+*   Starts a PostgreSQL 15 container.
+*   **Health Check**: The app container waits until the database is fully responsive (`pg_ready`) before proceeding.
+*   **Database Migrations**: Automatically runs all migrations to create the refined schema.
+*   **Idempotent Seeders**: Automatically populates the database with books, borrowers, and transaction history (skipping records if already present).
+*   API becomes live at: [http://localhost:3001](http://localhost:3001)
+
+---
+
+## 🛠️ Comprehensive Feature List
+
+### 1. **Modular Architecture & Framework**
+- **NestJS**: Built using a modular, service-oriented architecture for clarity and scalability.
+- **Dependency Injection**: Decoupled components for easier unit testing and maintainability.
+
+### 2. **Professional Database Management**
+- **Sequelize ORM**: Strongly typed database interactions.
+- **Migrations**: Database schema versioning for consistent development and production environments.
+- **Idempotent Seeders**: Custom-built seeders that check for `ISBN` (Books) and `Email` (Borrowers) before inserting, making re-runs safe.
+- **Soft Deletion**: Preserves historical data for books and borrowers while hiding them from active API results.
+
+### 3. **Security & Authentication**
+- **Basic Authentication**: Implemented across all administrative endpoints to ensure data security.
+- **Public vs Protected access**: Uses a custom `@Public()` decorator to allow open access to the books catalog while keeping management endpoints secure.
+- **Rate Limiting**: Integrated `@nestjs/throttler` to prevent brute-force attacks and API scraping (especially on `create` and `list` endpoints).
+
+### 4. **Automated Background Tasks (Cron)**
+- **Scheduled Status Updates**: A background cron job runs daily at 1 AM to scan all active borrows. It automatically updates statuses to `OVERDUE` if they have passed their `due_date`.
+
+### 5. **Robust Validation & Type Safety**
+- **Strict DTOs**: Implemented data transfer objects for all inputs.
+- **Class-Validator & Transformer**: All API payloads are strictly validated for types, formats (like Email), and constraints (like ISBN uniqueness).
+
+### 6. **Analytical Reporting & Data Export**
+- **Advanced SQL Analytics**: Custom aggregations to provide "Top 5 Books" and transactional summaries by status and period.
+- **Excel/CSV Export**: Backend generation of multi-formatted files (`.csv` and `.xlsx`) using `json2csv` and `exceljs`.
+- **Streamlined API**: Specialized endpoints for "Last Month" activity for easy administrative reporting.
+
+### 7. **Quality Assurance (Unit Testing)**
+- **100% Core Business Logic Coverage**: A comprehensive test suite with **40 individual tests** ensuring both success and error paths for:
+  - Book availability and stock management.
+  - Borrower registration and uniqueness.
+  - Borrowing transactions, returns, and overdue calculations.
+- **To run all tests**: `npm run test` (from root or library folder).
+
+### 8. **API Documentation (Swagger)**
+- **Interactive Documentation**: Full OpenAPI/Swagger integration with detailed endpoint descriptions and examples.
+- **Enum-Based Selection**: Swagger provides dropdown menus for selecting export formats (`csv` vs `xlsx`).
+
+---
+
+## 📖 Key API Endpoints Reference
+
+### **Books Management** (`/books`)
+- `POST /books`: Add new book (Secure + Rate Limited).
+- `GET /books`: List books with search/filters (Public + Rate Limited).
+- `GET /books/:id`: Get detailed book info.
+- `PATCH /books/:id`: Update book details.
+- `DELETE /books/:id`: Soft-delete a book.
+
+### **Borrowers Management** (`/borrowers`)
+- `POST /borrowers`: Register new borrower.
+- `GET /borrowers`: List all registered borrowers.
+- `PATCH /borrowers/:id`: Update personal details.
+
+### **Borrowing Lifecycle** (`/borrowing`)
+- `POST /borrowing/checkout`: Initiate a book loan (Atomic stock update).
+- `POST /borrowing/return`: Process a return (Atomic stock restoration).
+- `GET /borrowing/overdue`: View all books currently passed their due date.
+- `GET /borrowing/borrower/:id/history`: View specific user borrowing history.
+
+### **Advanced Reporting** (`/borrowing/analytics & /export`)
+- `GET /borrowing/analytics`: Summary dashboard data with period filtering.
+- `GET /borrowing/export`: Export historical data to Excel/CSV.
+- `GET /borrowing/export/last-month`: Quick report of all activity in the previous 30 days.
+
+---
+
+## 📊 Database Schema
+
+The system uses a relational schema designed for efficiency and atomic transaction tracking.
+
+```mermaid
+erDiagram
+    BOOK ||--o{ BORROWING_TRANSACTION : "referenced by"
+    BORROWER ||--o{ BORROWING_TRANSACTION : "references"
+
+    BOOK {
+        uuid id PK
+        string title
+        string author
+        string isbn "Unique"
+        int available_quantity
+        int borrowed_quantity
+        string shelf_location
+        string description
+        timestamp deletedAt "Soft Delete"
+    }
+
+    BORROWER {
+        uuid id PK
+        string name
+        string email "Unique"
+        timestamp registered_date
+        timestamp deletedAt "Soft Delete"
+    }
+
+    BORROWING_TRANSACTION {
+        uuid id PK
+        uuid book_id FK
+        uuid borrower_id FK
+        timestamp checkout_date
+        timestamp due_date
+        timestamp return_date "Null if active"
+        enum status "BORROWED, RETURNED, OVERDUE"
+    }
 ```
 
-## Run tests
+---
 
+## 🛠️ Database Setup Scripts
+
+To manually initialize or manage your database, use the following commands:
+
+### 1. Migrations (Schema Update)
+Create table structures and constraints:
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+npm run db:migrate
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
+### 2. Seed Data (Initial Mock Data)
+Populate the database with sample books and borrowers (Idempotent):
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+npm run db:seed
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+### 3. Database Reset
+Wipe and recreate all data (Use with caution!):
+```bash
+npm run db:migrate:undo:all
+npm run db:migrate
+npm run db:seed
+```
 
-## Resources
+---
 
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+## 📜 Full Documentation & Testing
+- **Swagger Documentation**: [http://localhost:3001/api](http://localhost:3001/api)
+- **Unit Testing**: Run `npm run test` to see all 40 test cases in action.

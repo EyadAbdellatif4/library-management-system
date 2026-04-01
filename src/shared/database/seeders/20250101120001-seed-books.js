@@ -126,8 +126,18 @@ module.exports = {
         updatedAt: new Date(),
       },
     ];
+ 
+    // Check for existing ISBNs to prevent duplicates
+    const [existingBooks] = await queryInterface.sequelize.query(
+      'SELECT isbn FROM "books"',
+    );
+    const existingIsbns = new Set(existingBooks.map((b) => b.isbn));
+    const booksToInsert = books.filter((b) => !existingIsbns.has(b.isbn));
 
-    return await queryInterface.bulkInsert('books', books);
+    if (booksToInsert.length > 0) {
+      return await queryInterface.bulkInsert('books', booksToInsert);
+    }
+    return Promise.resolve();
   },
 
   down: async (queryInterface, Sequelize) => {

@@ -96,8 +96,20 @@ module.exports = {
         updatedAt: new Date(),
       },
     ];
+ 
+    // Check for existing emails to prevent duplicates
+    const [existingBorrowers] = await queryInterface.sequelize.query(
+      'SELECT email FROM "borrowers"',
+    );
+    const existingEmails = new Set(existingBorrowers.map((b) => b.email));
+    const borrowersToInsert = borrowers.filter(
+      (b) => !existingEmails.has(b.email),
+    );
 
-    return await queryInterface.bulkInsert('borrowers', borrowers);
+    if (borrowersToInsert.length > 0) {
+      return await queryInterface.bulkInsert('borrowers', borrowersToInsert);
+    }
+    return Promise.resolve();
   },
 
   down: async (queryInterface, Sequelize) => {
