@@ -330,6 +330,10 @@ export class BorrowingService {
       };
     }
 
+    if (filter.status) {
+      whereConditions.status = filter.status;
+    }
+
     // Basic totals
     const totalTransactions = await this.borrowingTransactionModel.count({
       where: whereConditions,
@@ -395,6 +399,10 @@ export class BorrowingService {
       whereConditions.checkout_date = {
         [Op.between]: [new Date(filter.startDate), new Date(filter.endDate)],
       };
+    }
+
+    if (filter.status) {
+      whereConditions.status = filter.status;
     }
 
     const transactions = await this.borrowingTransactionModel.findAll({

@@ -1,7 +1,12 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsOptional, IsDateString, IsEnum } from 'class-validator';
 
-export class AnalyticsFilterDto {
+export enum ExportFormat {
+  CSV = 'csv',
+  XLSX = 'xlsx',
+}
+
+export class BaseReportDto {
   @IsOptional()
   @IsDateString()
   @ApiPropertyOptional({
@@ -19,13 +24,36 @@ export class AnalyticsFilterDto {
   endDate?: string;
 }
 
-export class ExportFilterDto extends AnalyticsFilterDto {
+export class AnalyticsFilterDto extends BaseReportDto {
   @IsOptional()
-  @IsEnum(['csv', 'xlsx'])
   @ApiPropertyOptional({
-    enum: ['csv', 'xlsx'],
-    description: 'The format of the export',
-    default: 'csv',
+    enum: ['BORROWED', 'RETURNED', 'OVERDUE'],
+    description: 'Filter by borrowing status',
   })
-  format?: 'csv' | 'xlsx';
+  status?: 'BORROWED' | 'RETURNED' | 'OVERDUE';
+}
+
+export class ExportFilterDto extends BaseReportDto {
+  @IsOptional()
+  @IsEnum(ExportFormat)
+  @ApiPropertyOptional({
+    enum: ExportFormat,
+    description: 'The format of the export',
+    default: ExportFormat.CSV,
+  })
+  format?: ExportFormat;
+
+  @IsOptional()
+  status?: 'BORROWED' | 'RETURNED' | 'OVERDUE';
+}
+
+export class MonthExportDto {
+  @IsOptional()
+  @IsEnum(ExportFormat)
+  @ApiPropertyOptional({
+    enum: ExportFormat,
+    description: 'The format of the export',
+    default: ExportFormat.CSV,
+  })
+  format?: ExportFormat;
 }

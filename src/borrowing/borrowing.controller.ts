@@ -17,7 +17,7 @@ import { ReturnBookDto } from './dto/return-book.dto';
 import { BorrowingFilterDto } from './dto/borrowing-filter.dto';
 import { Public } from '../auth/decorators/public.decorator';
 import { Response } from 'express';
-import { AnalyticsFilterDto, ExportFilterDto } from './dto/report-filter.dto';
+import { AnalyticsFilterDto, ExportFilterDto, MonthExportDto, ExportFormat } from './dto/report-filter.dto';
 
 @ApiTags('borrowing')
 @ApiBasicAuth('basic')
@@ -186,5 +186,48 @@ export class BorrowingController {
     res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
 
     res.send(buffer);
+  }
+
+  @Get('export/last-month')
+  @ApiOperation({ summary: 'Export all borrowing processes of the last month' })
+  async exportLastMonth(
+    @Res() res: Response,
+    @Query() query: MonthExportDto,
+  ) {
+    const format = query.format || ExportFormat.CSV;
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setMonth(startDate.getMonth() - 1);
+
+    return this.exportData(
+      {
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+        format,
+      },
+      res,
+    );
+  }
+
+  @Get('export/overdue-last-month')
+  @ApiOperation({ summary: 'Export all overdue borrows of the last month' })
+  async exportOverdueLastMonth(
+    @Res() res: Response,
+    @Query() query: MonthExportDto,
+  ) {
+    const format = query.format || ExportFormat.CSV;
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setMonth(startDate.getMonth() - 1);
+
+    return this.exportData(
+      {
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+        format,
+        status: 'OVERDUE',
+      },
+      res,
+    );
   }
 }

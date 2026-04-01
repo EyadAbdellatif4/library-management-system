@@ -16,7 +16,7 @@ export class CronService {
   /**
    * Cron job that checks every 1 minute if a book became overdue
    */
-  @Cron(CronExpression.EVERY_MINUTE)
+  @Cron(CronExpression.EVERY_DAY_AT_1AM)
   async handleOverdueCron() {
     this.logger.log('Running cron job to update overdue books...');
 
