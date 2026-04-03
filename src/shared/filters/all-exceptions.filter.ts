@@ -4,17 +4,8 @@ import {
   ArgumentsHost,
   HttpException,
   HttpStatus,
-  BadRequestException,
 } from '@nestjs/common';
 import { Response } from 'express';
-import {
-  ValidationErrorDto,
-  UnauthorizedErrorDto,
-  ForbiddenErrorDto,
-  NotFoundErrorDto,
-  ConflictErrorDto,
-  InternalServerErrorDto,
-} from '../dto/error-response.dto';
 
 /**
  * Global Exception Filter to standardize error responses
