@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BooksController } from './books.controller';
 import { BooksService } from './books.service';
+import { ThrottlerGuard } from '@nestjs/throttler';
 
 describe('BooksController', () => {
   let controller: BooksController;
@@ -32,7 +33,10 @@ describe('BooksController', () => {
           useValue: mockBooksService,
         },
       ],
-    }).compile();
+    })
+      .overrideGuard(ThrottlerGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     controller = module.get<BooksController>(BooksController);
     service = module.get<BooksService>(BooksService);
